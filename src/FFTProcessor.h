@@ -21,6 +21,7 @@ public:
 
 private:
     void processFrameInput();
+    void processFrameOutputTest();
     void processFrameOutput();
     void processSpectrum(float* data, int numBins);
 
