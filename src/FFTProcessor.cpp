@@ -19,14 +19,14 @@ void FFTProcessor::reset()
     std::fill(outputFifo.begin(), outputFifo.end(), 0.0f);
 }
 
-void FFTProcessor::processBlock(float* data, int numSamples, bool bypassed)
+void FFTProcessor::processBlock(float* data, int numSamples)
 {
-    for (int i = 0; i < numSamples; ++i) {
-        data[i] = processSample(data[i], bypassed);
-    }
+    // for (int i = 0; i < numSamples; ++i) {
+    //     data[i] = processSample(data[i]);
+    // }
 }
 
-float FFTProcessor::processSample(float sample, bool bypassed)
+float FFTProcessor::processSample(float sample, bool mode)
 {
     // Push the new sample value into the input FIFO.
     inputFifo[pos] = sample;
@@ -39,25 +39,68 @@ float FFTProcessor::processSample(float sample, bool bypassed)
 
     // Once we've read the sample, set this position in the FIFO back to
     // zero so we can add the IFFT results to it later.
-    outputFifo[pos] = 0.0f;
+    if (mode)
+        outputFifo[pos] = 0.0f;
 
     // Advance the FIFO index and wrap around if necessary.
     pos += 1;
     if (pos == fftSize) {
         pos = 0;
+        if (!mode)
+            processFrameInput();
     }
 
     // Process the FFT frame once we've collected hopSize samples.
     count += 1;
     if (count == hopSize) {
         count = 0;
-        processFrame(bypassed);
+        if (mode)
+            processFrameOutput();
     }
 
     return outputSample;
 }
 
-void FFTProcessor::processFrame(bool bypassed)
+void FFTProcessor::processFrameInput()
+{
+    const float* inputPtr = inputFifo.data();
+    float* fftPtr = fftData.data();
+
+    // Copy the input FIFO into the FFT working space in two parts.
+    std::memcpy(fftPtr, inputPtr, (fftSize) * sizeof(float));
+
+    float energyBeforeFFT = 0.0f;
+    for (int i = 0; i < fftSize; ++i) {
+        energyBeforeFFT += fftPtr[i] * fftPtr[i];
+    }
+
+    // Perform the forward FFT.
+    fft.performRealOnlyForwardTransform(fftPtr, true);
+    // fft.performRealOnlyForwardTransform(fftPtr);
+
+    // Do stuff with the FFT data.
+    // processSpectrum(fftPtr, numBins);
+
+    float energyAfterFFT = 0.0f;
+    for (int i = 0; i < fftSize; ++i) {
+        energyAfterFFT += fftPtr[i] * fftPtr[i];
+    }
+
+    // Scale the FFT data to conserve the energy.
+    if (energyAfterFFT > 0.0f) {
+        float scaleFactor = std::sqrt(energyBeforeFFT / energyAfterFFT);
+        for (int i = 0; i < fftSize; ++i) {
+            fftPtr[i] *= scaleFactor;
+        }
+    }
+
+    // Add the IFFT results to the output FIFO.
+    for (int i = 0; i < fftSize - pos; ++i) {
+        outputFifo[i + pos] = fftData[i];
+    }
+}
+
+void FFTProcessor::processFrameOutput()
 {
     const float* inputPtr = inputFifo.data();
     float* fftPtr = fftData.data();
@@ -76,28 +119,24 @@ void FFTProcessor::processFrame(bool bypassed)
     // Apply the window to avoid spectral leakage.
     window.multiplyWithWindowingTable(fftPtr, fftSize);
 
-    if (!bypassed) {
-        // Perform the forward FFT.
-        // fft.performRealOnlyForwardTransform(fftPtr, true);
-        fft.performRealOnlyInverseTransform(fftPtr);
+    // Perform the forward FFT.
+    // fft.performRealOnlyForwardTransform(fftPtr, true);
+    fft.performRealOnlyInverseTransform(fftPtr);
 
-        // Do stuff with the FFT data.
-        processSpectrum(fftPtr, numBins);
+    // Do stuff with the FFT data.
+    processSpectrum(fftPtr, numBins);
 
-        float energyAfterFFT = 0.0f;
+    float energyAfterFFT = 0.0f;
+    for (int i = 0; i < fftSize; ++i) {
+        energyAfterFFT += fftPtr[i] * fftPtr[i];
+    }
+
+    // Scale the FFT data to conserve the energy.
+    if (energyAfterFFT > 0.0f) {
+        float scaleFactor = std::sqrt(energyBeforeFFT / energyAfterFFT);
         for (int i = 0; i < fftSize; ++i) {
-            energyAfterFFT += fftPtr[i] * fftPtr[i];
+            fftPtr[i] *= scaleFactor;
         }
-
-        // Scale the FFT data to conserve the energy.
-        if (energyAfterFFT > 0.0f) {
-            float scaleFactor = std::sqrt(energyBeforeFFT / energyAfterFFT);
-            for (int i = 0; i < fftSize; ++i) {
-                fftPtr[i] *= scaleFactor;
-            }
-        }
-
-        // Perform the inverse FFT.
     }
 
     // Apply the window again for resynthesis.
@@ -124,21 +163,4 @@ void FFTProcessor::processSpectrum(float* data, int numBins)
     auto* cdata = reinterpret_cast<std::complex<float>*>(data);
 
     std::reverse(cdata, cdata + numBins);
-
-    for (int i = 0; i < numBins; ++i) {
-
-        // Usually we want to work with the magnitude and phase rather
-        // than the real and imaginary parts directly.
-        float magnitude = std::abs(cdata[i]);
-        float phase = std::arg(cdata[i]);
-
-        // This is where you'd do your spectral processing...
-
-        // Silly example where we change the phase of each frequency bin
-        // somewhat randomly. Uncomment the following line to enable.
-        // phase *= float(i);
-
-        // Convert magnitude and phase back into a complex number.
-        cdata[i] = std::polar(magnitude, phase);
-    }
 }

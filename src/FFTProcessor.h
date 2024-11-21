@@ -16,15 +16,16 @@ public:
     int getLatencyInSamples() const { return fftSize; }
 
     void reset();
-    float processSample(float sample, bool bypassed);
-    void processBlock(float* data, int numSamples, bool bypassed);
+    float processSample(float sample, bool mode);
+    void processBlock(float* data, int numSamples);
 
 private:
-    void processFrame(bool bypassed);
+    void processFrameInput();
+    void processFrameOutput();
     void processSpectrum(float* data, int numBins);
 
     // The FFT has 2^order points and fftSize/2 + 1 bins.
-    static constexpr int fftOrder = 14;
+    static constexpr int fftOrder = 10;
     static constexpr int fftSize = 1 << fftOrder;      // 1024 samples
     static constexpr int numBins = fftSize / 2 + 1;    // 513 bins
     static constexpr int overlap = 4;                  // 75% overlap

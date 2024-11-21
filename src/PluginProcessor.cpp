@@ -137,8 +137,6 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         buffer.clear(i, 0, numSamples);
     }
 
-    bool bypassed = false;
-
     float* channelL = buffer.getWritePointer(0);
     float* channelR = buffer.getWritePointer(1);
 
@@ -147,8 +145,16 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         float sampleL = channelL[sample];
         float sampleR = channelR[sample];
 
-        sampleL = fft[0].processSample(sampleL, bypassed);
-        sampleR = fft[1].processSample(sampleR, bypassed);
+        if (bypassed) {
+            if (fabs(fmaxf(sampleL, sampleR)) >= 0.001f) {
+                std::cout << "UNBYPASSED";
+                bypassed = false;
+            }
+            continue;
+        }
+
+        sampleL = fft[0].processSample(sampleL, mode);
+        sampleR = fft[1].processSample(sampleR, mode);
 
         channelL[sample] = sampleL;
         channelR[sample] = sampleR;
