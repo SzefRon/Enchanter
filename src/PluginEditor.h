@@ -13,6 +13,14 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
 
+    juce::ToggleButton modeToggleButton;
+
+    juce::ComboBox fftSizeComboBox;
+    juce::Label fftSizeLabel;
+
+    juce::TextButton bypassButton;
+    juce::Label bypassLabel;
+
 private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
