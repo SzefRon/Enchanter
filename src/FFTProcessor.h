@@ -20,8 +20,9 @@ public:
     void processBlock(float* data, int numSamples);
 
 private:
-    void processFrameInput();
+    void processFrameInputTest();
     void processFrameOutputTest();
+    void processFrameInput();
     void processFrameOutput();
     void processSpectrum(float* data, int numBins);
 
@@ -29,11 +30,11 @@ private:
     static constexpr int fftOrder = 10;
     static constexpr int fftSize = 1 << fftOrder;      // 1024 samples
     static constexpr int numBins = fftSize / 2 + 1;    // 513 bins
-    static constexpr int overlap = 4;                  // 75% overlap
+    static constexpr int overlap = 2;                  // 75% overlap
     static constexpr int hopSize = fftSize / overlap;  // 256 samples
 
     // Gain correction for using Hann window with 75% overlap.
-    static constexpr float windowCorrection = 2.0f / 3.0f;
+    static constexpr float windowCorrection = 1.0f / 2.0f;
 
     juce::dsp::FFT fft;
     juce::dsp::WindowingFunction<float> window;

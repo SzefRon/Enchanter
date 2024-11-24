@@ -45,24 +45,26 @@ float FFTProcessor::processSample(float sample, bool mode)
     pos += 1;
     if (pos == fftSize) {
         pos = 0;
-        if (!mode)
-            processFrameInput();
-        else
-            processFrameOutputTest();
+        // if (!mode)
+        //     processFrameInputTest();
+        // else
+        //     processFrameOutputTest();
     }
 
     // Process the FFT frame once we've collected hopSize samples.
     count += 1;
     if (count == hopSize) {
         count = 0;
-        // if (mode)
-            // processFrameOutput();
+        if (!mode)
+            processFrameInput();
+        else
+            processFrameOutput();
     }
 
     return outputSample;
 }
 
-void FFTProcessor::processFrameInput()
+void FFTProcessor::processFrameInputTest()
 {
     const float* inputPtr = inputFifo.data();
     float* fftPtr = fftData.data();
@@ -141,6 +143,62 @@ void FFTProcessor::processFrameOutputTest()
     }
 }
 
+void FFTProcessor::processFrameInput()
+{
+    const float* inputPtr = inputFifo.data();
+    float* fftPtr = fftData.data();
+
+    // Copy the input FIFO into the FFT working space in two parts.
+    std::memcpy(fftPtr, inputPtr + pos, (fftSize - pos) * sizeof(float));
+    if (pos > 0) {
+        std::memcpy(fftPtr + fftSize - pos, inputPtr, pos * sizeof(float));
+    }
+
+    float energyBeforeFFT = 0.0f;
+    for (int i = 0; i < fftSize; ++i) {
+        energyBeforeFFT += fftPtr[i] * fftPtr[i];
+    }
+
+    // Apply the window to avoid spectral leakage.
+    window.multiplyWithWindowingTable(fftPtr, fftSize);
+
+    // Perform the forward FFT.
+    fft.performRealOnlyForwardTransform(fftPtr, false);
+    fft.performRealOnlyInverseTransform(fftPtr);
+
+    // Do stuff with the FFT data.
+    // processSpectrum(fftPtr, numBins);
+
+    float energyAfterFFT = 0.0f;
+    for (int i = 0; i < fftSize; ++i) {
+        energyAfterFFT += fftPtr[i] * fftPtr[i];
+    }
+
+    // Scale the FFT data to conserve the energy.
+    // if (energyAfterFFT > 0.0f) {
+    //     float scaleFactor = std::sqrt(energyBeforeFFT / energyAfterFFT);
+    //     for (int i = 0; i < fftSize; ++i) {
+    //         fftPtr[i] *= scaleFactor;
+    //     }
+    // }
+
+    // Apply the window again for resynthesis.
+    window.multiplyWithWindowingTable(fftPtr, fftSize);
+
+    // Scale down the output samples because of the overlapping windows.
+    for (int i = 0; i < fftSize; ++i) {
+        fftPtr[i] *= windowCorrection;
+    }
+
+    // Add the IFFT results to the output FIFO.
+    for (int i = 0; i < pos; ++i) {
+        outputFifo[i] += fftData[i + fftSize - pos];
+    }
+    for (int i = 0; i < fftSize - pos; ++i) {
+        outputFifo[i + pos] += fftData[i];
+    }
+}
+
 void FFTProcessor::processFrameOutput()
 {
     const float* inputPtr = inputFifo.data();
@@ -165,7 +223,7 @@ void FFTProcessor::processFrameOutput()
     fft.performRealOnlyInverseTransform(fftPtr);
 
     // Do stuff with the FFT data.
-    processSpectrum(fftPtr, numBins);
+    // processSpectrum(fftPtr, numBins);
 
     float energyAfterFFT = 0.0f;
     for (int i = 0; i < fftSize; ++i) {
