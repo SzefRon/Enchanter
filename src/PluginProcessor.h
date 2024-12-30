@@ -19,6 +19,8 @@ public:
     bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
 
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+    void processBlockIn (float *const *&writePtrs, const int &sampleCount);
+    void processBlockOut (float *const *&writePtrs, const int &sampleCount);
     using AudioProcessor::processBlock;
 
     //==============================================================================
@@ -47,12 +49,14 @@ public:
     //==============================================================================
     bool fftMode = false;
 
+    bool operatingChannel = false;
+
     bool bypassed = true;
 
     void changeOrder(const int &order);
 
 private:
-    FFTProcessor fftProcessors[2];
+    FFTProcessor fftProcessor;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)

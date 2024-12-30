@@ -89,7 +89,7 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
     juce::ignoreUnused (sampleRate, samplesPerBlock);
-    setLatencySamples(fftProcessors[0].getSamples());
+    setLatencySamples(fftProcessor.getSamples());
 }
 
 void AudioPluginAudioProcessor::releaseResources()
@@ -139,6 +139,41 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
+    if (!fftMode) {
+        processBlockIn(writePtrs, sampleCount);
+    }
+    else {
+        processBlockOut(writePtrs, sampleCount);
+    }
+}
+
+void AudioPluginAudioProcessor::processBlockIn(float *const *&writePtrs, const int &sampleCount)
+{
+    for (int i = 0; i < sampleCount; i++) {
+        float sample;
+        if (!operatingChannel) {
+            sample = writePtrs[0][i];
+        }
+        else {
+            sample = writePtrs[1][i];
+        }
+
+        if (bypassed) {
+            if (fabs(sample >= 0.1f)) {
+                bypassed = false;
+                ((AudioPluginAudioProcessorEditor *)getActiveEditor())->bypassLabel.setText("Active", juce::NotificationType::dontSendNotification);
+            }
+            continue;
+        }
+
+        auto result = fftProcessor.processSampleIn(sample);
+        writePtrs[0][i] = result.first;
+        writePtrs[1][i] = result.second;
+    }
+}
+
+void AudioPluginAudioProcessor::processBlockOut(float *const *&writePtrs, const int &sampleCount)
+{
     for (int i = 0; i < sampleCount; i++) {
         float sampleL = writePtrs[0][i];
         float sampleR = writePtrs[1][i];
@@ -151,8 +186,9 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
             continue;
         }
 
-        writePtrs[0][i] = fftProcessors[0].processSample(sampleL, fftMode);
-        writePtrs[1][i] = fftProcessors[1].processSample(sampleR, fftMode);
+        auto result = fftProcessor.processSampleOut(sampleL, sampleR);
+        writePtrs[0][i] = result.first;
+        writePtrs[1][i] = result.second;
     }
 }
 
@@ -185,11 +221,8 @@ void AudioPluginAudioProcessor::setStateInformation (const void* data, int sizeI
 
 void AudioPluginAudioProcessor::changeOrder(const int & order)
 {
-    fftProcessors[0].changeOrder(order);
-    setLatencySamples(fftProcessors[0].getSamples());
-    
-    fftProcessors[1].changeOrder(order);
-    setLatencySamples(fftProcessors[1].getSamples());
+    fftProcessor.changeOrder(order);
+    setLatencySamples(fftProcessor.getSamples());
 }
 
 //==============================================================================
