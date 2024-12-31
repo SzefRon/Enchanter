@@ -188,21 +188,10 @@ void AudioPluginAudioProcessor::processBlockOut(float *const *&writePtrs, const 
         if (bypassed) {
             if (fabs(fmin(sampleL, sampleR) == 1.0f)) {
                 bypassed = false;
-                skipping = true;
                 juce::MessageManagerLock mml;
                 ((AudioPluginAudioProcessorEditor *)getActiveEditor())->bypassLabel.setText("Active", juce::NotificationType::dontSendNotification);
             }
             continue;
-        }
-
-        if (skipping) {
-            if (sampleSkipCounter >= fftProcessor.getSamples()) {
-                skipping = false;
-            }
-            else {
-                sampleSkipCounter++;
-                continue;
-            }
         }
 
         auto result = fftProcessor.processSampleOut(sampleL, sampleR);

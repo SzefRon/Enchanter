@@ -46,8 +46,6 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
         DBG(order);
 
         processorRef.bypassed = true;
-        processorRef.skipping = false;
-        processorRef.sampleSkipCounter = 0;
         bypassLabel.setText("Bypassed", juce::NotificationType::dontSendNotification);
         processorRef.changeOrder(order);
     };
@@ -66,8 +64,6 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
     bypassButton.onClick = [&]() {
         std::lock_guard<std::mutex> lock(processorRef.mutex);
         processorRef.bypassed = true;
-        processorRef.skipping = false;
-        processorRef.sampleSkipCounter = 0;
         bypassLabel.setText("Bypassed", juce::NotificationType::dontSendNotification);
         processorRef.fftProcessor.reset();
     };

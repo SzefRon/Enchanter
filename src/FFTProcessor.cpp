@@ -5,7 +5,7 @@ FFTProcessor::FFTProcessor()
     fftSamples(fftSampleAmount << 1),
     outputSamples{std::vector<float>(fftSampleAmount << 1), std::vector<float>(fftSampleAmount << 1)},
     processor(fftOrder),
-    window(std::make_unique<juce::dsp::WindowingFunction<float>>(fftSampleAmount + 1, juce::dsp::WindowingFunction<float>::WindowingMethod::hann, false))
+    window(std::make_unique<juce::dsp::WindowingFunction<float>>(fftSampleAmount + 1, juce::dsp::WindowingFunction<float>::WindowingMethod::kaiser, false))
 {
 }
 
@@ -39,7 +39,7 @@ void FFTProcessor::changeOrder(const int &order)
     fftSamples = std::vector<float>(fftSampleAmount << 1);
 
     processor = juce::dsp::FFT(fftOrder);
-    window = std::make_unique<juce::dsp::WindowingFunction<float>>(fftSampleAmount + 1, juce::dsp::WindowingFunction<float>::WindowingMethod::hann, false);
+    window = std::make_unique<juce::dsp::WindowingFunction<float>>(fftSampleAmount + 1, juce::dsp::WindowingFunction<float>::WindowingMethod::kaiser, false);
 
     reset();
 }
@@ -77,6 +77,10 @@ void FFTProcessor::processBlockIn()
 
     window->multiplyWithWindowingTable(fftData, fftSampleAmount);
     processor.performRealOnlyForwardTransform(fftData, true);
+
+    for (int i = 0; i < fftSampleAmount; i++) {
+        fftData[i] /= (fftSampleAmount / 2);
+    }
 
     int channel = !channelSwitch ? 0 : 1;
     auto outputData = outputSamples[channel].data();
@@ -122,6 +126,10 @@ void FFTProcessor::processBlockOut()
 
     processor.performRealOnlyInverseTransform(fftData);
     window->multiplyWithWindowingTable(fftData, fftSampleAmount);
+
+    for (int i = 0; i < fftSampleAmount; i++) {
+        fftData[i] *= (fftSampleAmount / 2);
+    }
 
     // Scale down audio to compensate windowing
     for (int i = 0; i < fftSampleAmount; i++) {
