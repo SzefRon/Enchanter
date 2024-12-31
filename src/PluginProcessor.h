@@ -52,11 +52,16 @@ public:
     bool operatingChannel = false;
 
     bool bypassed = true;
+    bool skipping = false;
+
+    std::mutex mutex;
+
+    int sampleSkipCounter = 0;
 
     void changeOrder(const int &order);
 
-private:
     FFTProcessor fftProcessor;
+private:
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)

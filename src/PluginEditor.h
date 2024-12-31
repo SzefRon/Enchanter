@@ -21,6 +21,12 @@ public:
     juce::TextButton bypassButton;
     juce::Label bypassLabel;
 
+    juce::ArrowButton leftArrowButton;
+    juce::ArrowButton rightArrowButton;
+    juce::Label offsetLabel;
+
+    int offset = 0;
+
 private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.

@@ -3,18 +3,21 @@
 
 //==============================================================================
 AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAudioProcessor& p)
-    : AudioProcessorEditor (&p), processorRef (p)
+    : AudioProcessorEditor (&p), processorRef (p),
+    leftArrowButton("left", 0.5f, juce::Colours::white),
+    rightArrowButton("right", 0.0f, juce::Colours::white)
 {
     juce::ignoreUnused (processorRef);
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
-    setSize (410, 60);
+    setSize (590, 60);
 
     // --------- MODE TOGGLE BUTTON
 
     modeToggleButton.setButtonText("Mode 1");
 
     modeToggleButton.onClick = [&]() {
+        std::lock_guard<std::mutex> lock(processorRef.mutex);
         bool state = modeToggleButton.getToggleState();
         if (!state) {
             modeToggleButton.setButtonText("Mode 1");
@@ -34,12 +37,17 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
     fftSizeComboBox.addItemList({"128", "256", "512", "1024", "2048", "4096", "8192"}, 1);
     fftSizeComboBox.setSelectedId(4, juce::NotificationType::dontSendNotification);
     fftSizeComboBox.onChange = [&]() {
+        std::lock_guard<std::mutex> lock(processorRef.mutex);
         auto selectedID = fftSizeComboBox.getSelectedId();
         auto str = fftSizeComboBox.getItemText(selectedID - 1);
         auto value = std::stoi(str.toStdString());
         int order = static_cast<int>(std::log2f(value));
 
+        DBG(order);
+
         processorRef.bypassed = true;
+        processorRef.skipping = false;
+        processorRef.sampleSkipCounter = 0;
         bypassLabel.setText("Bypassed", juce::NotificationType::dontSendNotification);
         processorRef.changeOrder(order);
     };
@@ -56,8 +64,12 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
 
     bypassButton.setButtonText("Bypass");
     bypassButton.onClick = [&]() {
+        std::lock_guard<std::mutex> lock(processorRef.mutex);
         processorRef.bypassed = true;
+        processorRef.skipping = false;
+        processorRef.sampleSkipCounter = 0;
         bypassLabel.setText("Bypassed", juce::NotificationType::dontSendNotification);
+        processorRef.fftProcessor.reset();
     };
 
     addAndMakeVisible(bypassButton);
@@ -67,6 +79,33 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
     bypassLabel.setText("Bypassed", juce::NotificationType::dontSendNotification);
 
     addAndMakeVisible(bypassLabel);
+
+    // --------- OFFSET ARROW BUTTONS
+
+    leftArrowButton.onClick = [&]() {
+        std::lock_guard<std::mutex> lock(processorRef.mutex);
+        processorRef.fftProcessor.hopPos -= 1;
+        processorRef.fftProcessor.samplePos -= 1;
+        offset -= 1;
+        offsetLabel.setText(std::to_string(offset), juce::NotificationType::dontSendNotification);
+    };
+
+    rightArrowButton.onClick = [&]() {
+        std::lock_guard<std::mutex> lock(processorRef.mutex);
+        processorRef.fftProcessor.hopPos += 1;
+        processorRef.fftProcessor.samplePos += 1;
+        offset += 1;
+        offsetLabel.setText(std::to_string(offset), juce::NotificationType::dontSendNotification);
+    };
+
+    addAndMakeVisible(leftArrowButton);
+    addAndMakeVisible(rightArrowButton);
+
+    // --------- OFFSET LABEL
+
+    offsetLabel.setText("0", juce::NotificationType::dontSendNotification);
+
+    addAndMakeVisible(offsetLabel);
 }
 
 AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor()
@@ -90,4 +129,7 @@ void AudioPluginAudioProcessorEditor::resized()
     fftSizeLabel.setBounds(150, 10, 60, 40);
     bypassButton.setBounds(220, 10, 100, 40);
     bypassLabel.setBounds(330, 10, 70, 40);
+    leftArrowButton.setBounds(410, 10, 40, 40);
+    rightArrowButton.setBounds(460, 10, 40, 40);
+    offsetLabel.setBounds(510, 10, 40, 40);
 }

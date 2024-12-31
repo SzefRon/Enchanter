@@ -125,6 +125,7 @@ bool AudioPluginAudioProcessor::isBusesLayoutSupported (const BusesLayout& layou
 void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                                               juce::MidiBuffer& midiMessages)
 {
+    std::lock_guard<std::mutex> lock(mutex);
     juce::ignoreUnused (midiMessages);
 
     juce::ScopedNoDenormals noDenormals;
@@ -151,17 +152,22 @@ void AudioPluginAudioProcessor::processBlockIn(float *const *&writePtrs, const i
 {
     for (int i = 0; i < sampleCount; i++) {
         float sample;
-        if (!operatingChannel) {
-            sample = writePtrs[0][i];
-        }
-        else {
-            sample = writePtrs[1][i];
-        }
+        int channel = !operatingChannel ? 0 : 1;
+
+        sample = writePtrs[channel][i];
 
         if (bypassed) {
             if (fabs(sample >= 0.1f)) {
                 bypassed = false;
+                juce::MessageManagerLock mml;
                 ((AudioPluginAudioProcessorEditor *)getActiveEditor())->bypassLabel.setText("Active", juce::NotificationType::dontSendNotification);
+                for (int j = i; j < sampleCount - 1; j++) {
+                    writePtrs[0][j] = 0.0f;
+                    writePtrs[1][j] = 0.0f;
+                }
+                writePtrs[0][sampleCount - 1] = 1.0f;
+                writePtrs[1][sampleCount - 1] = 1.0f;
+                break;
             }
             continue;
         }
@@ -174,21 +180,34 @@ void AudioPluginAudioProcessor::processBlockIn(float *const *&writePtrs, const i
 
 void AudioPluginAudioProcessor::processBlockOut(float *const *&writePtrs, const int &sampleCount)
 {
+
     for (int i = 0; i < sampleCount; i++) {
         float sampleL = writePtrs[0][i];
         float sampleR = writePtrs[1][i];
 
         if (bypassed) {
-            if (fabs(fmax(sampleL, sampleR) >= 0.1f)) {
+            if (fabs(fmin(sampleL, sampleR) == 1.0f)) {
                 bypassed = false;
+                skipping = true;
+                juce::MessageManagerLock mml;
                 ((AudioPluginAudioProcessorEditor *)getActiveEditor())->bypassLabel.setText("Active", juce::NotificationType::dontSendNotification);
             }
             continue;
         }
 
+        if (skipping) {
+            if (sampleSkipCounter >= fftProcessor.getSamples()) {
+                skipping = false;
+            }
+            else {
+                sampleSkipCounter++;
+                continue;
+            }
+        }
+
         auto result = fftProcessor.processSampleOut(sampleL, sampleR);
-        writePtrs[0][i] = result.first;
-        writePtrs[1][i] = result.second;
+        writePtrs[0][i] = result;
+        writePtrs[1][i] = result;
     }
 }
 

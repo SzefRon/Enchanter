@@ -17,24 +17,26 @@ public:
     std::pair<float, float> processSampleIn(const float &sample);
     void processBlockIn();
 
-    std::pair<float, float> processSampleOut(const float &sampleL, const float &sampleR);
+    float processSampleOut(const float &sampleL, const float &sampleR);
     void processBlockOut();
 
     const int &getSamples() const;
+
+    int samplePos = 0;
+    int hopPos = 0;
 
 private:
     int fftOrder = 10;
     int fftSampleAmount = 1 << fftOrder;
     int fftHopAmount = fftSampleAmount / 2;
 
-    std::vector<float> samples;
+    std::array<std::vector<float>, 2> samples;
     std::vector<float> fftSamples;
     std::array<std::vector<float>, 2> outputSamples;
-    int samplePos = 0;
-    int hopPos = 0;
+
     bool channelSwitch = false;
 
     juce::dsp::FFT processor;
-    juce::dsp::WindowingFunction<float> window;
+    std::unique_ptr<juce::dsp::WindowingFunction<float>> window;
 };
 
