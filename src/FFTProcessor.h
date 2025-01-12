@@ -36,7 +36,7 @@ private:
 
     bool channelSwitch = false;
 
-    juce::dsp::FFT processor;
+    std::unique_ptr<juce::dsp::FFT> processor;
     std::unique_ptr<juce::dsp::WindowingFunction<float>> window;
 };
 

@@ -4,8 +4,8 @@ FFTProcessor::FFTProcessor()
     : samples{std::vector<float>(fftSampleAmount << 1), std::vector<float>(fftSampleAmount << 1)},
     fftSamples(fftSampleAmount << 1),
     outputSamples{std::vector<float>(fftSampleAmount << 1), std::vector<float>(fftSampleAmount << 1)},
-    processor(fftOrder),
-    window(std::make_unique<juce::dsp::WindowingFunction<float>>(fftSampleAmount + 1, juce::dsp::WindowingFunction<float>::WindowingMethod::kaiser, false))
+    processor(std::make_unique<juce::dsp::FFT>(fftOrder)),
+    window(std::make_unique<juce::dsp::WindowingFunction<float>>(fftSampleAmount + 1, juce::dsp::WindowingFunction<float>::WindowingMethod::kaiser, true))
 {
 }
 
@@ -31,6 +31,7 @@ void FFTProcessor::changeOrder(const int &order)
 {
     fftOrder = order;
     fftSampleAmount = 1 << fftOrder;
+    fftHopAmount = fftSampleAmount / 2;
 
     for (int i = 0; i < 2; i++) {
         samples[i] = std::vector<float>(fftSampleAmount << 1);
@@ -38,8 +39,8 @@ void FFTProcessor::changeOrder(const int &order)
     }
     fftSamples = std::vector<float>(fftSampleAmount << 1);
 
-    processor = juce::dsp::FFT(fftOrder);
-    window = std::make_unique<juce::dsp::WindowingFunction<float>>(fftSampleAmount + 1, juce::dsp::WindowingFunction<float>::WindowingMethod::kaiser, false);
+    processor = std::make_unique<juce::dsp::FFT>(fftOrder);
+    window = std::make_unique<juce::dsp::WindowingFunction<float>>(fftSampleAmount + 1, juce::dsp::WindowingFunction<float>::WindowingMethod::kaiser, true);
 
     reset();
 }
@@ -76,7 +77,7 @@ void FFTProcessor::processBlockIn()
     }
 
     window->multiplyWithWindowingTable(fftData, fftSampleAmount);
-    processor.performRealOnlyForwardTransform(fftData, true);
+    processor->performRealOnlyForwardTransform(fftData, true);
 
     for (int i = 0; i < fftSampleAmount; i++) {
         fftData[i] /= (fftSampleAmount / 2);
@@ -124,7 +125,7 @@ void FFTProcessor::processBlockOut()
         std::memcpy(fftData + fftSampleAmount - samplePos, data, samplePos * sizeof(float));
     }
 
-    processor.performRealOnlyInverseTransform(fftData);
+    processor->performRealOnlyInverseTransform(fftData);
     window->multiplyWithWindowingTable(fftData, fftSampleAmount);
 
     for (int i = 0; i < fftSampleAmount; i++) {
