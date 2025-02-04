@@ -90,6 +90,7 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     // initialisation that you need..
     juce::ignoreUnused (sampleRate, samplesPerBlock);
     setLatencySamples(fftProcessor.getSamples());
+    changeOrder(10);
 }
 
 void AudioPluginAudioProcessor::releaseResources()
