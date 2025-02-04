@@ -24,11 +24,11 @@ public:
 
     int samplePos = 0;
     int hopPos = 0;
+    int fftSampleAmount = 1 << fftOrder;
+    int fftHopAmount = fftSampleAmount / 2;
 
 private:
     int fftOrder = 10;
-    int fftSampleAmount = 1 << fftOrder;
-    int fftHopAmount = fftSampleAmount / 2;
 
     std::array<std::vector<float>, 2> samples;
     std::vector<float> fftSamples;

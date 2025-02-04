@@ -5,8 +5,9 @@ FFTProcessor::FFTProcessor()
     fftSamples(fftSampleAmount << 1),
     outputSamples{std::vector<float>(fftSampleAmount << 1), std::vector<float>(fftSampleAmount << 1)},
     processor(std::make_unique<juce::dsp::FFT>(fftOrder)),
-    window(std::make_unique<juce::dsp::WindowingFunction<float>>(fftSampleAmount + 1, juce::dsp::WindowingFunction<float>::WindowingMethod::kaiser, true))
+    window(std::make_unique<juce::dsp::WindowingFunction<float>>(fftSampleAmount + 1, juce::dsp::WindowingFunction<float>::WindowingMethod::hann, true))
 {
+    reset();
 }
 
 FFTProcessor::~FFTProcessor()
@@ -40,7 +41,7 @@ void FFTProcessor::changeOrder(const int &order)
     fftSamples = std::vector<float>(fftSampleAmount << 1);
 
     processor = std::make_unique<juce::dsp::FFT>(fftOrder);
-    window = std::make_unique<juce::dsp::WindowingFunction<float>>(fftSampleAmount + 1, juce::dsp::WindowingFunction<float>::WindowingMethod::kaiser, true);
+    window = std::make_unique<juce::dsp::WindowingFunction<float>>(fftSampleAmount + 1, juce::dsp::WindowingFunction<float>::WindowingMethod::hann, true);
 
     reset();
 }
@@ -126,7 +127,8 @@ void FFTProcessor::processBlockOut()
     }
 
     processor->performRealOnlyInverseTransform(fftData);
-    window->multiplyWithWindowingTable(fftData, fftSampleAmount);
+    // No need for 2nd windowing? Otherwise hann won't add up.
+    // window->multiplyWithWindowingTable(fftData, fftSampleAmount);
 
     for (int i = 0; i < fftSampleAmount; i++) {
         fftData[i] *= (fftSampleAmount / 2);
