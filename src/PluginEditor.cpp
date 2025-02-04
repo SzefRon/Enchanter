@@ -80,16 +80,20 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
 
     leftArrowButton.onClick = [&]() {
         std::lock_guard<std::mutex> lock(processorRef.mutex);
-        processorRef.fftProcessor.hopPos -= 1;
-        processorRef.fftProcessor.samplePos -= 1;
+        int value = processorRef.fftProcessor.hopPos;
+        processorRef.fftProcessor.hopPos = (value == 0) ? processorRef.fftProcessor.fftHopAmount - 1 : value - 1;
+        value = processorRef.fftProcessor.samplePos;
+        processorRef.fftProcessor.samplePos = (value == 0) ? processorRef.fftProcessor.fftSampleAmount - 1 : value - 1;
         offset -= 1;
         offsetLabel.setText(std::to_string(offset), juce::NotificationType::dontSendNotification);
     };
 
     rightArrowButton.onClick = [&]() {
         std::lock_guard<std::mutex> lock(processorRef.mutex);
-        processorRef.fftProcessor.hopPos += 1;
-        processorRef.fftProcessor.samplePos += 1;
+        int value = processorRef.fftProcessor.hopPos;
+        processorRef.fftProcessor.hopPos = (value == processorRef.fftProcessor.fftHopAmount - 1) ? 0 : value + 1;
+        value = processorRef.fftProcessor.samplePos;
+        processorRef.fftProcessor.samplePos = (value == processorRef.fftProcessor.fftSampleAmount - 1) ? 0 : value + 1;
         offset += 1;
         offsetLabel.setText(std::to_string(offset), juce::NotificationType::dontSendNotification);
     };
