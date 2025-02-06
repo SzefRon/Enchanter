@@ -30,7 +30,7 @@ public:
 private:
     int fftOrder = 10;
 
-    std::array<std::vector<float>, 2> samples;
+    std::array<std::vector<float>, 2> inputSamples;
     std::vector<float> fftSamples;
     std::array<std::vector<float>, 2> outputSamples;
 

@@ -1,9 +1,9 @@
 #include "FFTProcessor.h"
 
 FFTProcessor::FFTProcessor()
-    : samples{std::vector<float>(fftSampleAmount << 1), std::vector<float>(fftSampleAmount << 1)},
+    : inputSamples{std::vector<float>(fftSampleAmount), std::vector<float>(fftSampleAmount)},
     fftSamples(fftSampleAmount << 1),
-    outputSamples{std::vector<float>(fftSampleAmount << 1), std::vector<float>(fftSampleAmount << 1)},
+    outputSamples{std::vector<float>(fftSampleAmount), std::vector<float>(fftSampleAmount)},
     processor(std::make_unique<juce::dsp::FFT>(fftOrder)),
     window(std::make_unique<juce::dsp::WindowingFunction<float>>(fftSampleAmount + 1, juce::dsp::WindowingFunction<float>::WindowingMethod::hann, true))
 {
@@ -19,7 +19,7 @@ void FFTProcessor::reset()
     std::fill(fftSamples.begin(), fftSamples.end(), 0.0f);
     
     for (int i = 0; i < 2; i++) {
-        std::fill(samples[i].begin(), samples[i].end(), 0.0f);
+        std::fill(inputSamples[i].begin(), inputSamples[i].end(), 0.0f);
         std::fill(outputSamples[i].begin(), outputSamples[i].end(), 0.0f);
     }
 
@@ -35,8 +35,8 @@ void FFTProcessor::changeOrder(const int &order)
     fftHopAmount = fftSampleAmount / 2;
 
     for (int i = 0; i < 2; i++) {
-        samples[i] = std::vector<float>(fftSampleAmount << 1);
-        outputSamples[i] = std::vector<float>(fftSampleAmount << 1);
+        inputSamples[i] = std::vector<float>(fftSampleAmount);
+        outputSamples[i] = std::vector<float>(fftSampleAmount);
     }
     fftSamples = std::vector<float>(fftSampleAmount << 1);
 
@@ -51,7 +51,7 @@ std::pair<float, float> FFTProcessor::processSampleIn(const float &sample)
     float outputSampleL = outputSamples[0][samplePos];
     float outputSampleR = outputSamples[1][samplePos];
 
-    samples[0][samplePos] = sample;
+    inputSamples[0][samplePos] = sample;
     
     samplePos++;
     if (samplePos >= fftSampleAmount) {
@@ -69,7 +69,7 @@ std::pair<float, float> FFTProcessor::processSampleIn(const float &sample)
 
 void FFTProcessor::processBlockIn()
 {
-    auto data = samples[0].data();
+    auto data = inputSamples[0].data();
     auto fftData = fftSamples.data();
     
     std::memcpy(fftData, data + samplePos, (fftSampleAmount - samplePos) * sizeof(float));
@@ -80,8 +80,9 @@ void FFTProcessor::processBlockIn()
     window->multiplyWithWindowingTable(fftData, fftSampleAmount);
     processor->performRealOnlyForwardTransform(fftData, true);
 
+    int compensation = (fftSampleAmount / 2);
     for (int i = 0; i < fftSampleAmount; i++) {
-        fftData[i] /= (fftSampleAmount / 2);
+        fftData[i] /= compensation;
     }
 
     int channel = !channelSwitch ? 0 : 1;
@@ -98,8 +99,8 @@ float FFTProcessor::processSampleOut(const float &sampleL, const float &sampleR)
     float outputSample = outputSamples[0][samplePos];
     outputSamples[0][samplePos] = 0.0f;
 
-    samples[0][samplePos] = sampleL;
-    samples[1][samplePos] = sampleR;
+    inputSamples[0][samplePos] = sampleL;
+    inputSamples[1][samplePos] = sampleR;
     
     samplePos++;
     if (samplePos >= fftSampleAmount) {
@@ -118,7 +119,7 @@ float FFTProcessor::processSampleOut(const float &sampleL, const float &sampleR)
 void FFTProcessor::processBlockOut()
 {
     int channel = !channelSwitch ? 0 : 1;
-    auto data = samples[channel].data();
+    auto data = inputSamples[channel].data();
     auto fftData = fftSamples.data();
     
     std::memcpy(fftData, data + samplePos, (fftSampleAmount - samplePos) * sizeof(float));
@@ -127,16 +128,14 @@ void FFTProcessor::processBlockOut()
     }
 
     processor->performRealOnlyInverseTransform(fftData);
-    // No need for 2nd windowing? Otherwise hann won't add up.
+    // No need for 2nd windowing. Otherwise hann won't add up.
     // window->multiplyWithWindowingTable(fftData, fftSampleAmount);
 
-    for (int i = 0; i < fftSampleAmount; i++) {
-        fftData[i] *= (fftSampleAmount / 2);
-    }
-
     // Scale down audio to compensate windowing
+    int compensation = (fftSampleAmount / 2);
     for (int i = 0; i < fftSampleAmount; i++) {
         fftData[i] *= 0.5f;
+        fftData[i] *= compensation;
     }
 
     auto outputData = outputSamples[0].data();

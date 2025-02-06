@@ -187,7 +187,7 @@ void AudioPluginAudioProcessor::processBlockOut(float *const *&writePtrs, const 
         float sampleR = writePtrs[1][i];
 
         if (bypassed) {
-            if (fabs(fmin(sampleL, sampleR) == 1.0f)) {
+            if (sampleL == 1.0f && sampleR == 1.0f) {
                 bypassed = false;
                 juce::MessageManagerLock mml;
                 ((AudioPluginAudioProcessorEditor *)getActiveEditor())->bypassLabel.setText("Active", juce::NotificationType::dontSendNotification);
