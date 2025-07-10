@@ -47,11 +47,14 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     //==============================================================================
-    bool fftMode = false;
+
+    juce::AudioProcessorValueTreeState parameters;
+    juce::AudioParameterBool *fftMode = nullptr;
+    juce::AudioParameterBool *bypassed = nullptr;
+    juce::AudioParameterInt *fftOrder = nullptr;
 
     bool operatingChannel = false;
 
-    bool bypassed = true;
 
     std::mutex mutex;
 

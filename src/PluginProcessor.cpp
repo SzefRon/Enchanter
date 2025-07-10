@@ -10,8 +10,23 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                       #endif
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
-                       )
+                       ),
+    parameters(*this, nullptr, juce::Identifier("parameters"), 
+    {
+        std::make_unique<juce::AudioParameterBool>("fftMode",
+            "FFT Mode",
+            false),
+        std::make_unique<juce::AudioParameterBool>("bypassed",
+            "Bypassed",
+            true),
+        std::make_unique<juce::AudioParameterInt>("fftOrder",
+            "FFT Order",
+            7, 13, 10)
+    })
 {
+    fftMode = dynamic_cast<juce::AudioParameterBool *>(parameters.getParameter("fftMode"));
+    bypassed = dynamic_cast<juce::AudioParameterBool *>(parameters.getParameter("bypassed"));
+    fftOrder = dynamic_cast<juce::AudioParameterInt *>(parameters.getParameter("fftOrder"));
 }
 
 AudioPluginAudioProcessor::~AudioPluginAudioProcessor()
@@ -90,7 +105,7 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     // initialisation that you need..
     juce::ignoreUnused (sampleRate, samplesPerBlock);
     setLatencySamples(fftProcessor.getSamples());
-    changeOrder(10);
+    changeOrder(fftOrder->get());
 }
 
 void AudioPluginAudioProcessor::releaseResources()
@@ -141,7 +156,7 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    if (!fftMode) {
+    if (!fftMode->get()) {
         processBlockIn(writePtrs, sampleCount);
     }
     else {
@@ -157,11 +172,9 @@ void AudioPluginAudioProcessor::processBlockIn(float *const *&writePtrs, const i
 
         sample = writePtrs[channel][i];
 
-        if (bypassed) {
+        if (bypassed->get()) {
             if (fabs(sample >= 0.1f)) {
-                bypassed = false;
-                juce::MessageManagerLock mml;
-                ((AudioPluginAudioProcessorEditor *)getActiveEditor())->bypassLabel.setText("Active", juce::NotificationType::dontSendNotification);
+                *bypassed = false;
                 for (int j = i; j < sampleCount - 1; j++) {
                     writePtrs[0][j] = 0.0f;
                     writePtrs[1][j] = 0.0f;
@@ -186,9 +199,9 @@ void AudioPluginAudioProcessor::processBlockOut(float *const *&writePtrs, const 
         float sampleL = writePtrs[0][i];
         float sampleR = writePtrs[1][i];
 
-        if (bypassed) {
+        if (bypassed->get()) {
             if (sampleL == 1.0f && sampleR == 1.0f) {
-                bypassed = false;
+                *bypassed = false;
                 juce::MessageManagerLock mml;
                 ((AudioPluginAudioProcessorEditor *)getActiveEditor())->bypassLabel.setText("Active", juce::NotificationType::dontSendNotification);
             }
@@ -209,26 +222,28 @@ bool AudioPluginAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* AudioPluginAudioProcessor::createEditor()
 {
-    return new AudioPluginAudioProcessorEditor (*this);
+    return new AudioPluginAudioProcessorEditor (*this, parameters);
 }
 
 //==============================================================================
 void AudioPluginAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
-    juce::ignoreUnused (destData);
+    auto state = parameters.copyState();
+    std::unique_ptr<juce::XmlElement> xml (state.createXml());
+    copyXmlToBinary (*xml, destData);
 }
 
 void AudioPluginAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    // You should use this method to restore your parameters from this memory block,
-    // whose contents will have been created by the getStateInformation() call.
-    juce::ignoreUnused (data, sizeInBytes);
+    std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
+    if (xmlState.get() != nullptr) {
+        if (xmlState->hasTagName(parameters.state.getType())) {
+            parameters.replaceState(juce::ValueTree::fromXml(*xmlState));
+        }
+    }
 }
 
-void AudioPluginAudioProcessor::changeOrder(const int & order)
+void AudioPluginAudioProcessor::changeOrder(const int &order)
 {
     fftProcessor.changeOrder(order);
     setLatencySamples(fftProcessor.getSamples());

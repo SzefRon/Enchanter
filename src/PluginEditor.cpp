@@ -2,11 +2,13 @@
 #include "PluginEditor.h"
 
 //==============================================================================
-AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAudioProcessor& p)
-    : AudioProcessorEditor (&p), processorRef (p),
+AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAudioProcessor& p, juce::AudioProcessorValueTreeState& vts)
+    : AudioProcessorEditor (&p), processorRef (p), valueTreeState(vts),
     leftArrowButton("left", 0.5f, juce::Colours::white),
     rightArrowButton("right", 0.0f, juce::Colours::white)
 {
+    vts.addParameterListener("bypassed", this);
+
     juce::ignoreUnused (processorRef);
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
@@ -16,26 +18,27 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
 
     modeToggleButton.setButtonText("Mode 1");
 
-    modeToggleButton.onClick = [&]() {
+    modeToggleButton.onStateChange = [&]() {
         std::lock_guard<std::mutex> lock(processorRef.mutex);
         bool state = modeToggleButton.getToggleState();
         if (!state) {
             modeToggleButton.setButtonText("Mode 1");
-            processorRef.fftMode = false;
         }
         else {
             modeToggleButton.setButtonText("Mode 2");
-            processorRef.fftMode = true;
         }
     };
 
     addAndMakeVisible(modeToggleButton);
+    modeToggleAttachement.reset(new juce::AudioProcessorValueTreeState::ButtonAttachment(
+        valueTreeState, "fftMode", modeToggleButton
+    ));
 
     // --------- FFT SIZE COMBO BOX
 
 
     fftSizeComboBox.addItemList({"128", "256", "512", "1024", "2048", "4096", "8192"}, 1);
-    fftSizeComboBox.setSelectedId(4, juce::NotificationType::dontSendNotification);
+    fftSizeComboBox.setSelectedId(processorRef.fftOrder->get() - 6, juce::NotificationType::dontSendNotification);
     fftSizeComboBox.onChange = [&]() {
         std::lock_guard<std::mutex> lock(processorRef.mutex);
         auto selectedID = fftSizeComboBox.getSelectedId();
@@ -45,8 +48,8 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
 
         DBG(order);
 
-        processorRef.bypassed = true;
-        bypassLabel.setText("Bypassed", juce::NotificationType::dontSendNotification);
+        *processorRef.bypassed = true;
+        *processorRef.fftOrder = order;
         processorRef.changeOrder(order);
     };
 
@@ -63,8 +66,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
     bypassButton.setButtonText("Bypass");
     bypassButton.onClick = [&]() {
         std::lock_guard<std::mutex> lock(processorRef.mutex);
-        processorRef.bypassed = true;
-        bypassLabel.setText("Bypassed", juce::NotificationType::dontSendNotification);
+        *processorRef.bypassed = true;
         processorRef.fftProcessor.reset();
     };
 
@@ -72,7 +74,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
 
     // --------- BYPASS LABEL
 
-    bypassLabel.setText("Bypassed", juce::NotificationType::dontSendNotification);
+    bypassLabel.setText(processorRef.bypassed->get() ? "Bypassed" : "Active", juce::NotificationType::dontSendNotification);
 
     addAndMakeVisible(bypassLabel);
 
@@ -110,6 +112,19 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
 
 AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor()
 {
+    valueTreeState.removeParameterListener("bypassed", this);
+}
+
+void AudioPluginAudioProcessorEditor::parameterChanged(const juce::String &parameterID, float newValue)
+{
+    if (parameterID == "bypassed") {
+        juce::MessageManager::callAsync([&]()
+        {
+            auto* bypassParam = valueTreeState.getRawParameterValue("bypassed");
+            bool bypassed = bypassParam && (*bypassParam >= 0.5f);
+            bypassLabel.setText(bypassed ? "Bypassed" : "Active", juce::dontSendNotification);
+        });
+    }
 }
 
 //==============================================================================

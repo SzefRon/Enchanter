@@ -85,6 +85,12 @@ void FFTProcessor::processBlockIn()
         fftData[i] /= compensation;
     }
 
+    // auto complexData = reinterpret_cast<std::complex<float> *>(fftData);
+    // for (int i = 0; i < fftSampleAmount; i++) {
+    //     auto val = complexData[i];
+    //     complexData[i] = std::complex<float>(std::abs(val) * 0.31831f, std::arg(val) * 0.31831f);
+    // }
+
     int channel = !channelSwitch ? 0 : 1;
     auto outputData = outputSamples[channel].data();
 
@@ -127,9 +133,11 @@ void FFTProcessor::processBlockOut()
         std::memcpy(fftData + fftSampleAmount - samplePos, data, samplePos * sizeof(float));
     }
 
-    processor->performRealOnlyInverseTransform(fftData);
-    // No need for 2nd windowing. Otherwise hann won't add up.
-    // window->multiplyWithWindowingTable(fftData, fftSampleAmount);
+    // auto complexData = reinterpret_cast<std::complex<float> *>(fftData);
+    // for (int i = 0; i < fftSampleAmount; i++) {
+    //     auto val = complexData[i];
+    //     complexData[i] = std::polar(val.real() * 3.14159f, val.imag() * 3.14159f);
+    // }
 
     // Scale down audio to compensate windowing
     int compensation = (fftSampleAmount / 2);
@@ -137,6 +145,11 @@ void FFTProcessor::processBlockOut()
         fftData[i] *= 0.5f;
         fftData[i] *= compensation;
     }
+
+    processor->performRealOnlyInverseTransform(fftData);
+    // No need for 2nd windowing. Otherwise hann won't add up.
+    // window->multiplyWithWindowingTable(fftData, fftSampleAmount);
+
 
     auto outputData = outputSamples[0].data();
 

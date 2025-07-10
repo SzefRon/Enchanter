@@ -3,17 +3,24 @@
 #include "PluginProcessor.h"
 
 //==============================================================================
-class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor
+class AudioPluginAudioProcessorEditor final :
+    public juce::AudioProcessorEditor,
+    public juce::AudioProcessorValueTreeState::Listener
 {
 public:
-    explicit AudioPluginAudioProcessorEditor (AudioPluginAudioProcessor&);
+    explicit AudioPluginAudioProcessorEditor (AudioPluginAudioProcessor& p, juce::AudioProcessorValueTreeState& vts);
     ~AudioPluginAudioProcessorEditor() override;
+
+    void parameterChanged(const juce::String& parameterID, float newValue) override;
 
     //==============================================================================
     void paint (juce::Graphics&) override;
     void resized() override;
 
+    juce::AudioProcessorValueTreeState &valueTreeState;
+
     juce::ToggleButton modeToggleButton;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> modeToggleAttachement;
 
     juce::ComboBox fftSizeComboBox;
     juce::Label fftSizeLabel;
