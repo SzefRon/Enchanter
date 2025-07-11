@@ -21,12 +21,16 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
             true),
         std::make_unique<juce::AudioParameterInt>("fftOrder",
             "FFT Order",
-            7, 13, 10)
+            7, 13, 10),
+        std::make_unique<juce::AudioParameterInt>("hopPosOffset",
+            "Hop Position Offset",
+            0, 1 << 13, 0),
     })
 {
     fftMode = dynamic_cast<juce::AudioParameterBool *>(parameters.getParameter("fftMode"));
     bypassed = dynamic_cast<juce::AudioParameterBool *>(parameters.getParameter("bypassed"));
     fftOrder = dynamic_cast<juce::AudioParameterInt *>(parameters.getParameter("fftOrder"));
+    fftProcessor.hopPosOffset = dynamic_cast<juce::AudioParameterInt *>(parameters.getParameter("hopPosOffset"));
 }
 
 AudioPluginAudioProcessor::~AudioPluginAudioProcessor()

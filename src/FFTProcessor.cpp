@@ -59,8 +59,9 @@ std::pair<float, float> FFTProcessor::processSampleIn(const float &sample)
     }
 
     hopPos++;
-    if (hopPos >= fftHopAmount) {
-        hopPos = 0;
+    int hopPosFinal = hopPos + hopPosOffset->get();
+    if (hopPosFinal >= fftHopAmount) {
+        hopPos -= fftHopAmount;
         processBlockIn();
     }
 
@@ -114,8 +115,9 @@ float FFTProcessor::processSampleOut(const float &sampleL, const float &sampleR)
     }
 
     hopPos++;
-    if (hopPos >= fftHopAmount) {
-        hopPos = 0;
+    int hopPosFinal = hopPos + hopPosOffset->get();
+    if (hopPosFinal >= fftHopAmount) {
+        hopPos -= fftHopAmount;
         processBlockOut();
     }
 

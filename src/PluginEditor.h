@@ -28,8 +28,8 @@ public:
     juce::TextButton bypassButton;
     juce::Label bypassLabel;
 
-    juce::ArrowButton leftArrowButton;
-    juce::ArrowButton rightArrowButton;
+    juce::Slider offsetSlider;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> offsetAttachement;
     juce::Label offsetLabel;
 
     int offset = 0;

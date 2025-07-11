@@ -2,6 +2,7 @@
 
 #include <juce_gui_extra/juce_gui_extra.h>
 #include <juce_dsp/juce_dsp.h>
+#include <juce_audio_processors/juce_audio_processors.h>
 
 #include <vector>
 
@@ -21,6 +22,8 @@ public:
     void processBlockOut();
 
     const int &getSamples() const;
+
+    juce::AudioParameterInt *hopPosOffset = nullptr;
 
     int samplePos = 0;
     int hopPos = 0;
