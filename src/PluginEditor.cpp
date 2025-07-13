@@ -6,6 +6,8 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
     : AudioProcessorEditor (&p), processorRef (p), valueTreeState(vts)
 {
     vts.addParameterListener("bypassed", this);
+    vts.addParameterListener("fftOrder", this);
+    vts.addParameterListener("hopPosOffsetPercent", this);
 
     juce::ignoreUnused (processorRef);
     // Make sure that before the constructor has finished, you've set the
@@ -48,8 +50,6 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
         *processorRef.bypassed = true;
         *processorRef.fftOrder = order;
         processorRef.changeOrder(order);
-
-        offsetSlider.setRange(0.0, (1 << processorRef.fftOrder->get()) - 1, 1.0);
     };
 
     addAndMakeVisible(fftSizeComboBox);
@@ -83,24 +83,16 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
 
     offsetSlider.setSliderStyle(juce::Slider::SliderStyle::RotaryVerticalDrag);
     offsetSlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-    offsetSlider.onValueChange = [&]() {
-        std::lock_guard<std::mutex> lock(processorRef.mutex);
-        int offsetValue = static_cast<int>(std::lround(offsetSlider.getValue()));
-        *processorRef.fftProcessor.hopPosOffset = offsetValue;
-
-        offsetLabel.setText(std::to_string(offsetValue), juce::dontSendNotification);
-    };
 
     addAndMakeVisible(offsetSlider);
     offsetAttachement.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(
-        valueTreeState, "hopPosOffset", offsetSlider
+        valueTreeState, "hopPosOffsetPercent", offsetSlider
     ));
-    offsetSlider.setRange(0.0, (1 << processorRef.fftOrder->get()) - 1, 1.0);
+    offsetSlider.setRange(0.0, 1.0);
 
     // --------- OFFSET LABEL
 
-    offsetLabel.setText(std::to_string(processorRef.fftProcessor.hopPosOffset->get()), 
-        juce::NotificationType::dontSendNotification);
+    updateOffsetLabel();
 
     addAndMakeVisible(offsetLabel);
 }
@@ -112,12 +104,25 @@ AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor()
 
 void AudioPluginAudioProcessorEditor::parameterChanged(const juce::String &parameterID, float newValue)
 {
+    juce::ignoreUnused(newValue);
     if (parameterID == "bypassed") {
         juce::MessageManager::callAsync([&]()
         {
             auto* bypassParam = valueTreeState.getRawParameterValue("bypassed");
             bool bypassed = bypassParam && (*bypassParam >= 0.5f);
             bypassLabel.setText(bypassed ? "Bypassed" : "Active", juce::dontSendNotification);
+        });
+    }
+    else if (parameterID == "fftOrder") {
+        juce::MessageManager::callAsync([&]()
+        {
+            updateOffsetLabel();
+        });
+    }
+    else if (parameterID == "hopPosOffsetPercent") {
+        juce::MessageManager::callAsync([&]()
+        {
+            updateOffsetLabel();
         });
     }
 }
@@ -141,4 +146,13 @@ void AudioPluginAudioProcessorEditor::resized()
     bypassLabel.setBounds(330, 10, 70, 40);
     offsetSlider.setBounds(400, 0, 60, 60);
     offsetLabel.setBounds(460, 10, 40, 40);
+}
+
+void AudioPluginAudioProcessorEditor::updateOffsetLabel()
+{
+    int fftSampleAmount = 1 << processorRef.fftOrder->get();
+    int hopPosOffset = static_cast<int>(
+        std::lroundf(processorRef.fftProcessor.hopPosOffsetPercent->get() * (fftSampleAmount - 1))
+    );
+    offsetLabel.setText(std::to_string(hopPosOffset), juce::dontSendNotification);
 }

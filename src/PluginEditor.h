@@ -39,5 +39,7 @@ private:
     // access the processor object that created it.
     AudioPluginAudioProcessor& processorRef;
 
+    void updateOffsetLabel();
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessorEditor)
 };

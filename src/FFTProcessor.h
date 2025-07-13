@@ -23,7 +23,7 @@ public:
 
     const int &getSamples() const;
 
-    juce::AudioParameterInt *hopPosOffset = nullptr;
+    juce::AudioParameterFloat *hopPosOffsetPercent = nullptr;
 
     int samplePos = 0;
     int hopPos = 0;
