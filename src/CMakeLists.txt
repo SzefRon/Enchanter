@@ -18,6 +18,8 @@ juce_add_plugin(${PROJECT_NAME}
 
 target_sources(${PROJECT_NAME}
     PRIVATE
+        CustomAudioWaveVisualiser.cpp
+        
         Diode.cpp
         CustomStyle.cpp
         BinaryData.cpp

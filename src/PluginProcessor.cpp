@@ -25,12 +25,22 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         std::make_unique<juce::AudioParameterFloat>("hopPosOffsetPercent",
             "Hop Position Offset",
             juce::NormalisableRange<float>(0.0f, 1.0f, 1.0f / (1 << 13), 1.0f, false), 0.0f),
-    })
+    }),
+    waveVisualiserTop(1),
+    waveVisualiserBottom(1)
 {
     fftMode = dynamic_cast<juce::AudioParameterBool *>(parameters.getParameter("fftMode"));
     bypassed = dynamic_cast<juce::AudioParameterBool *>(parameters.getParameter("bypassed"));
     fftOrder = dynamic_cast<juce::AudioParameterInt *>(parameters.getParameter("fftOrder"));
     fftProcessor.hopPosOffsetPercent = dynamic_cast<juce::AudioParameterFloat *>(parameters.getParameter("hopPosOffsetPercent"));
+
+    waveVisualiserTop.setRepaintRate(30);
+    waveVisualiserTop.setSamplesPerBlock(4);
+    waveVisualiserTop.setBufferSize(1 << 9);
+
+    waveVisualiserBottom.setRepaintRate(30);
+    waveVisualiserBottom.setSamplesPerBlock(4);
+    waveVisualiserBottom.setBufferSize(1 << 9);
 }
 
 AudioPluginAudioProcessor::~AudioPluginAudioProcessor()
@@ -145,6 +155,8 @@ bool AudioPluginAudioProcessor::isBusesLayoutSupported (const BusesLayout& layou
 void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                                               juce::MidiBuffer& midiMessages)
 {
+    auto fftModeB = fftMode->get();
+
     std::lock_guard<std::mutex> lock(mutex);
     juce::ignoreUnused (midiMessages);
 
@@ -160,7 +172,7 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    if (!fftMode->get()) {
+    if (!fftModeB) {
         processBlockIn(writePtrs, sampleCount);
     }
     else {
@@ -190,9 +202,13 @@ void AudioPluginAudioProcessor::processBlockIn(float *const *&writePtrs, const i
             continue;
         }
 
+        waveVisualiserTop.pushSample(&sample, 1);
+
         auto result = fftProcessor.processSampleIn(sample);
         writePtrs[0][i] = result.first;
         writePtrs[1][i] = result.second;
+
+        waveVisualiserBottom.pushSample(&result.first, 1);
     }
 }
 
@@ -210,9 +226,13 @@ void AudioPluginAudioProcessor::processBlockOut(float *const *&writePtrs, const 
             continue;
         }
 
+        waveVisualiserTop.pushSample(&sampleL, 1);
+
         auto result = fftProcessor.processSampleOut(sampleL, sampleR);
         writePtrs[0][i] = result;
         writePtrs[1][i] = result;
+
+        waveVisualiserBottom.pushSample(&result, 1);
     }
 }
 

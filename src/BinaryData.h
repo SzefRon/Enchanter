@@ -8,7 +8,7 @@ namespace BinaryData
     const int           background_pngSize = 22923;
 
     extern const char*  logo_png;
-    const int           logo_pngSize = 8965;
+    const int           logo_pngSize = 7311;
 
     extern const char*  PoppinsBlack_ttf;
     const int           PoppinsBlack_ttfSize = 139056;

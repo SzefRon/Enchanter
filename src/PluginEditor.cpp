@@ -103,6 +103,17 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
     updateOffsetLabel();
 
     addAndMakeVisible(offsetLabel);
+
+    // --------- WAVE VISUALISER
+
+    processorRef.waveVisualiserTop.setOpaque(false);
+    processorRef.waveVisualiserTop.setColours(juce::Colours::transparentBlack, juce::Colours::black);
+    addAndMakeVisible(processorRef.waveVisualiserTop);
+
+    processorRef.waveVisualiserBottom.flipRender = true;
+    processorRef.waveVisualiserBottom.setOpaque(false);
+    processorRef.waveVisualiserBottom.setColours(juce::Colours::transparentBlack, juce::Colours::black);
+    addAndMakeVisible(processorRef.waveVisualiserBottom);
 }
 
 AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor()
@@ -119,6 +130,8 @@ void AudioPluginAudioProcessorEditor::parameterChanged(const juce::String &param
             auto* bypassParam = valueTreeState.getRawParameterValue("bypassed");
             bool bypassed = bypassParam && (*bypassParam >= 0.5f);
             bypassDiode.setState(!bypassed);
+            processorRef.waveVisualiserTop.clear();
+            processorRef.waveVisualiserBottom.clear();
         });
     }
     else if (parameterID == "fftOrder") {
@@ -146,8 +159,9 @@ void AudioPluginAudioProcessorEditor::paint (juce::Graphics& g)
     juce::Image logo = juce::ImageCache::getFromMemory(BinaryData::logo_png, BinaryData::logo_pngSize);
     g.drawImage(logo, juce::Rectangle<float>(10.0f, 10.0f, 100.0f, 100.0f));
 
-    //auto modeLabelBounds = juce::Rectangle<int>(393, 40, 70, 70);
-    //g.fillRect(modeLabelBounds);
+    /*auto modeLabelBounds = juce::Rectangle<int>(22, 52, 46, 46);
+    g.setColour(juce::Colours::white.withAlpha(0.5f));
+    g.fillRect(modeLabelBounds);*/
     
     // g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
 }
@@ -165,6 +179,12 @@ void AudioPluginAudioProcessorEditor::resized()
     offsetNameLabel.setBounds(385, 10, 85, 30);
     offsetSlider.setBounds(388, 40, 80, 80);
     offsetLabel.setBounds(388, 40, 80, 80);
+
+    auto topVisualiserBounds = juce::Rectangle<int>(22, 52, 46, 46);
+    auto bottomVisualiserBounds = topVisualiserBounds.removeFromBottom(23);
+
+    processorRef.waveVisualiserTop.setBounds(topVisualiserBounds);
+    processorRef.waveVisualiserBottom.setBounds(bottomVisualiserBounds);
     // fftSizeLabel.setBounds(150, 10, 60, 40);
     // bypassLabel.setBounds(330, 10, 70, 40);
 }

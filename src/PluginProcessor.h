@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_audio_processors/juce_audio_processors.h>
+#include "CustomAudioWaveVisualiser.h"
 
 #include "FFTProcessor.h"
 
@@ -53,8 +54,10 @@ public:
     juce::AudioParameterBool *bypassed = nullptr;
     juce::AudioParameterInt *fftOrder = nullptr;
 
-    bool operatingChannel = false;
+    CustomAudioWaveVisualiser waveVisualiserTop;
+    CustomAudioWaveVisualiser waveVisualiserBottom;
 
+    bool operatingChannel = false;
 
     std::mutex mutex;
 
