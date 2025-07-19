@@ -16,9 +16,11 @@ juce_add_plugin(${PROJECT_NAME}
     FORMATS AU VST3 Standalone                  # The formats to build. Other valid formats are: AAX Unity VST AU AUv3
     PRODUCT_NAME ${PROJECT_NAME})        # The name of the final executable, which can differ from the target name
 
-
 target_sources(${PROJECT_NAME}
     PRIVATE
+        Diode.cpp
+        CustomStyle.cpp
+        BinaryData.cpp
         FFTProcessor.cpp
         PluginEditor.cpp
         PluginProcessor.cpp)

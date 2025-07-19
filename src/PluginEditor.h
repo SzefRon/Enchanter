@@ -1,6 +1,9 @@
 #pragma once
 
 #include "PluginProcessor.h"
+#include "BinaryData.h"
+#include "CustomStyle.h"
+#include "Diode.h"
 
 //==============================================================================
 class AudioPluginAudioProcessorEditor final :
@@ -17,8 +20,12 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
 
+    CustomStyle cs;
+    juce::LookAndFeel_V4 testStyle;
+
     juce::AudioProcessorValueTreeState &valueTreeState;
 
+    juce::Label modeLabel;
     juce::ToggleButton modeToggleButton;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> modeToggleAttachement;
 
@@ -26,14 +33,13 @@ public:
     juce::Label fftSizeLabel;
 
     juce::TextButton bypassButton;
-    juce::Label bypassLabel;
+    Diode bypassDiode;
 
     juce::Slider offsetSlider;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> offsetAttachement;
+    juce::Label offsetNameLabel;
     juce::Label offsetLabel;
-
-    int offset = 0;
-
+    
 private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.

@@ -5,6 +5,8 @@
 AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAudioProcessor& p, juce::AudioProcessorValueTreeState& vts)
     : AudioProcessorEditor (&p), processorRef (p), valueTreeState(vts)
 {
+    setLookAndFeel(&cs);
+    
     vts.addParameterListener("bypassed", this);
     vts.addParameterListener("fftOrder", this);
     vts.addParameterListener("hopPosOffsetPercent", this);
@@ -12,22 +14,18 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
     juce::ignoreUnused (processorRef);
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
-    setSize (510, 60);
+    setSize (480, 120);
+    setResizable(false, false);
+
+    // --------- MODE LABEL
+
+    modeLabel.setText("MODE", juce::dontSendNotification);
+    modeLabel.setJustificationType(juce::Justification::centred);
+    modeLabel.setFont(CustomStyle::customFont.withHeight(30.0f));
+
+    addAndMakeVisible(modeLabel);
 
     // --------- MODE TOGGLE BUTTON
-
-    modeToggleButton.setButtonText("Mode 1");
-
-    modeToggleButton.onStateChange = [&]() {
-        std::lock_guard<std::mutex> lock(processorRef.mutex);
-        bool state = modeToggleButton.getToggleState();
-        if (!state) {
-            modeToggleButton.setButtonText("Mode 1");
-        }
-        else {
-            modeToggleButton.setButtonText("Mode 2");
-        }
-    };
 
     addAndMakeVisible(modeToggleButton);
     modeToggleAttachement.reset(new juce::AudioProcessorValueTreeState::ButtonAttachment(
@@ -36,6 +34,8 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
 
     // --------- FFT SIZE COMBO BOX
 
+    // fftSizeComboBox.setLookAndFeel(&testStyle);
+    fftSizeComboBox.setJustificationType(juce::Justification::centred);
     fftSizeComboBox.addItemList({"128", "256", "512", "1024", "2048", "4096", "8192"}, 1);
     fftSizeComboBox.setSelectedId(processorRef.fftOrder->get() - 6, juce::dontSendNotification);
     fftSizeComboBox.onChange = [&]() {
@@ -63,7 +63,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
 
     // --------- BYPASS BUTTON
 
-    bypassButton.setButtonText("Bypass");
+    bypassButton.setButtonText("BYPASS");
     bypassButton.onClick = [&]() {
         std::lock_guard<std::mutex> lock(processorRef.mutex);
         *processorRef.bypassed = true;
@@ -72,12 +72,17 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
 
     addAndMakeVisible(bypassButton);
 
-    // --------- BYPASS LABEL
+    // --------- BYPASS DIODE
 
-    bypassLabel.setText(processorRef.bypassed->get() ? "Bypassed" : "Active", juce::dontSendNotification);
-    bypassLabel.setJustificationType(juce::Justification::centred);
+    bypassDiode.setState(!(*processorRef.bypassed));
+    addAndMakeVisible(bypassDiode);
 
-    addAndMakeVisible(bypassLabel);
+    // --------- OFFSET NAME LABEL
+
+    offsetNameLabel.setText("OFFSET", juce::dontSendNotification);
+    offsetNameLabel.setJustificationType(juce::Justification::centred);
+    offsetNameLabel.setFont(CustomStyle::customFont.withHeight(30.0f));
+    addAndMakeVisible(offsetNameLabel);
 
     // --------- OFFSET SLIDER
 
@@ -92,6 +97,9 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
 
     // --------- OFFSET LABEL
 
+    offsetLabel.setInterceptsMouseClicks(false, false);
+    offsetLabel.setJustificationType(juce::Justification::centred);
+    offsetLabel.setFont(CustomStyle::customFont.withHeight(17.5f));
     updateOffsetLabel();
 
     addAndMakeVisible(offsetLabel);
@@ -110,7 +118,7 @@ void AudioPluginAudioProcessorEditor::parameterChanged(const juce::String &param
         {
             auto* bypassParam = valueTreeState.getRawParameterValue("bypassed");
             bool bypassed = bypassParam && (*bypassParam >= 0.5f);
-            bypassLabel.setText(bypassed ? "Bypassed" : "Active", juce::dontSendNotification);
+            bypassDiode.setState(!bypassed);
         });
     }
     else if (parameterID == "fftOrder") {
@@ -130,8 +138,18 @@ void AudioPluginAudioProcessorEditor::parameterChanged(const juce::String &param
 //==============================================================================
 void AudioPluginAudioProcessorEditor::paint (juce::Graphics& g)
 {
+    g.fillAll(juce::Colours::black);
     // (Our component is opaque, so we must completely fill the background with a solid colour)
-    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
+    juce::Image bg = juce::ImageCache::getFromMemory(BinaryData::background_png, BinaryData::background_pngSize);
+    g.drawImage(bg, getBounds().toFloat());
+
+    juce::Image logo = juce::ImageCache::getFromMemory(BinaryData::logo_png, BinaryData::logo_pngSize);
+    g.drawImage(logo, juce::Rectangle<float>(10.0f, 10.0f, 100.0f, 100.0f));
+
+    //auto modeLabelBounds = juce::Rectangle<int>(393, 40, 70, 70);
+    //g.fillRect(modeLabelBounds);
+    
+    // g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
 }
 
 void AudioPluginAudioProcessorEditor::resized()
@@ -139,13 +157,16 @@ void AudioPluginAudioProcessorEditor::resized()
     // int width = getWidth(), height = getHeight();
     // int padding = 10;
 
-    modeToggleButton.setBounds(10, 10, 80, 40);
-    fftSizeComboBox.setBounds(100, 10, 40, 40);
-    fftSizeLabel.setBounds(150, 10, 60, 40);
-    bypassButton.setBounds(220, 10, 100, 40);
-    bypassLabel.setBounds(330, 10, 70, 40);
-    offsetSlider.setBounds(400, 0, 60, 60);
-    offsetLabel.setBounds(460, 10, 40, 40);
+    modeLabel.setBounds(120, 10, 80, 30);
+    modeToggleButton.setBounds(125, 40, 70, 70);
+    bypassButton.setBounds(210, 10, 110, 40);
+    bypassDiode.setBounds(330, 10, 40, 40);
+    fftSizeComboBox.setBounds(210, 60, 165, 50);
+    offsetNameLabel.setBounds(385, 10, 85, 30);
+    offsetSlider.setBounds(388, 40, 80, 80);
+    offsetLabel.setBounds(388, 40, 80, 80);
+    // fftSizeLabel.setBounds(150, 10, 60, 40);
+    // bypassLabel.setBounds(330, 10, 70, 40);
 }
 
 void AudioPluginAudioProcessorEditor::updateOffsetLabel()
