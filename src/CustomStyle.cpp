@@ -63,7 +63,7 @@ void CustomStyle::drawToggleButton(juce::Graphics &g, juce::ToggleButton &tb, bo
             g.setColour(magentaSel);
     else
         g.setColour(magenta);
-    g.setOpacity(0.6f);
+    //g.setOpacity(0.6f);
     g.fillRoundedRectangle(boundsScaled, roundedCoeff);
 
     g.setColour(juce::Colours::black);
@@ -107,7 +107,7 @@ void CustomStyle::drawButtonBackground(juce::Graphics &g, juce::Button &b, const
             g.setColour(magentaSel);
     else
         g.setColour(magenta);
-    g.setOpacity(0.6f);
+    //g.setOpacity(0.6f);
     g.fillRoundedRectangle(boundsScaled, roundedCoeff);
 
     g.setColour(juce::Colours::black);
@@ -154,7 +154,7 @@ void CustomStyle::drawComboBox(juce::Graphics &g, int width, int, bool isButtonD
     // field
 
     g.setColour(darkMagenta);
-    g.setOpacity(0.6f);
+    //g.setOpacity(0.6f);
     g.fillRoundedRectangle(boundsField, roundedCoeff);
 
     g.setColour(juce::Colours::black);
@@ -169,7 +169,7 @@ void CustomStyle::drawComboBox(juce::Graphics &g, int width, int, bool isButtonD
             g.setColour(magentaSel);
     else
         g.setColour(magenta);
-    g.setOpacity(0.6f);
+    //g.setOpacity(0.6f);
     g.fillRoundedRectangle(boundsButton, roundedCoeff);
 
     g.setColour(juce::Colours::black);
@@ -251,7 +251,7 @@ void CustomStyle::drawPopupMenuItem(juce::Graphics &g, const juce::Rectangle<int
     
     auto bounds = area.expanded(-outlineThickness, -0.5f * outlineThickness);
 
-    g.setOpacity(0.6f);
+    //g.setOpacity(0.6f);
     g.fillRect(bounds);
 
     auto height = bounds.getHeight();

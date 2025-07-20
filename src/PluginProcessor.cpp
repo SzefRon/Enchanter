@@ -36,11 +36,11 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
 
     waveVisualiserTop.setRepaintRate(30);
     waveVisualiserTop.setSamplesPerBlock(4);
-    waveVisualiserTop.setBufferSize(1 << 9);
+    waveVisualiserTop.setBufferSize(1 << 8);
 
     waveVisualiserBottom.setRepaintRate(30);
     waveVisualiserBottom.setSamplesPerBlock(4);
-    waveVisualiserBottom.setBufferSize(1 << 9);
+    waveVisualiserBottom.setBufferSize(1 << 8);
 }
 
 AudioPluginAudioProcessor::~AudioPluginAudioProcessor()
