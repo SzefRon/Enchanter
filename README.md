@@ -1,5 +1,5 @@
 <div align="center">
-<img src="https://raw.githubusercontent.com/SzefRon/Enchanter/refs/heads/master/img/logo.png" width="252" height="252"/>
+<img src="https://raw.githubusercontent.com/SzefRon/Enchanter/refs/heads/master/img/logo.png" width="150" height="150"/>
 </div>
 
 ## What is this?
@@ -10,7 +10,7 @@ This is an experimental **VST** plugin made with **JUCE** and **JuMake**.
 
 ## What does it do?
 
-It encrypts and decrypt incoming audio signal in real time. This encryption contains spectral information derived from the signal.
+It encrypts and decrypts incoming audio signal in real time. This encryption contains spectral information derived from the signal.
 
 ## What's the point?
 
